@@ -12,6 +12,7 @@ import re
 from pdf2image import convert_from_bytes  # Für PDF-zu-Bild-Konvertierung
 import streamlit.components.v1 as components  # Für das Einbetten von HTML-Komponenten
 
+
 # Set up logging for better error tracking
 logging.basicConfig(level=logging.INFO)
 
@@ -258,15 +259,13 @@ def main():
     # Sidebar Instructions
     with st.sidebar:
         st.header("❗ **Bedienungsanleitung**")
+        
+        # First instruction step
         st.markdown("""
         1. **Geben Sie Ihren OpenAI-API-Schlüssel ein**: Erhalten Sie Ihren API-Schlüssel von [OpenAI](https://platform.openai.com/account/api-keys).
-        2. **Datei hochladen oder Text eingeben**: Sie können eine PDF-, DOCX- oder Bilddatei hochladen oder direkt Text eingeben.
-        3. **Lernziele angeben** (optional): Definieren Sie die Lernziele, die die Quizfragen abdecken sollen.
-        4. **Sprache für Fragen wählen**: Wählen Sie die Sprache, in der die Quizfragen generiert werden sollen.
-        5. **Anzahl der Fragen auswählen**: Bestimmen Sie, wie viele Fragen generiert werden sollen.
-        6. **Quiz generieren**: Klicken Sie auf "Quiz generieren", um das Quiz zu erstellen und als Word-Dokument herunterzuladen.
         """)
         
+        # Embedded video inserted between step 1 and step 2
         components.html("""
             <iframe width="100%" height="180" src="https://www.youtube.com/embed/NsTAjBdHb1k" 
             title="Demo-Video auf Deutsch" frameborder="0" allow="accelerometer; autoplay; 
@@ -274,10 +273,18 @@ def main():
             </iframe>
         """, height=180)
         
+        # Remaining instruction steps starting from step 2
+        st.markdown("""
+        2. **Datei hochladen oder Text eingeben**: Sie können eine PDF-, DOCX- oder Bilddatei hochladen oder direkt Text eingeben.
+        3. **Lernziele angeben** (optional): Definieren Sie die Lernziele, die die Quizfragen abdecken sollen.
+        4. **Sprache für Fragen wählen**: Wählen Sie die Sprache, in der die Quizfragen generiert werden sollen.
+        5. **Anzahl der Fragen auswählen**: Bestimmen Sie, wie viele Fragen generiert werden sollen.
+        6. **Quiz generieren**: Klicken Sie auf "Quiz generieren", um das Quiz zu erstellen und als Word-Dokument herunterzuladen.
+        """)        
+        
         st.markdown("---")
         st.header("📜 Lizenz")
         st.markdown("Diese Anwendung steht unter der [MIT-Lizenz](https://opensource.org/licenses/MIT).")
-        
         st.header("💬 Kontakt")
         st.markdown("**Kontakt**: [Pietro](mailto:pietro.rossi@bbw.ch)")
 
