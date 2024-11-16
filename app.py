@@ -257,7 +257,7 @@ def main():
 
     # Sidebar Instructions
     with st.sidebar:
-        st.header("❗ **So verwenden Sie diese App**")
+        st.header("❗ **Bedienungsanleitung**")
         st.markdown("""
         1. **Geben Sie Ihren OpenAI-API-Schlüssel ein**: Erhalten Sie Ihren API-Schlüssel von [OpenAI](https://platform.openai.com/account/api-keys).
         2. **Datei hochladen oder Text eingeben**: Sie können eine PDF-, DOCX- oder Bilddatei hochladen oder direkt Text eingeben.
