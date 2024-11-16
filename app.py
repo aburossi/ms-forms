@@ -9,13 +9,13 @@ import io
 import base64
 import logging
 import re
-from pdf2image import convert_from_bytes  # Added for PDF to image conversion
-import streamlit.components.v1 as components  # Added for embedding HTML components
+from pdf2image import convert_from_bytes  # Für PDF-zu-Bild-Konvertierung
+import streamlit.components.v1 as components  # Für das Einbetten von HTML-Komponenten
 
 # Set up logging for better error tracking
 logging.basicConfig(level=logging.INFO)
 
-# Initialize OpenAI client (moved outside main to maintain global scope)
+# Initialize OpenAI client (außerhalb von main für globalen Zugriff)
 def initialize_openai(api_key):
     return OpenAI(api_key=api_key)
 
@@ -83,7 +83,7 @@ def process_image(_image):
             img = img.convert('RGB')
 
         # Resize if the image is too large
-        max_size = 1000  # Reduced max size to reduce memory consumption
+        max_size = 1000  # Maximale Größe zur Reduzierung des Speicherverbrauchs
         if max(img.size) > max_size:
             img.thumbnail((max_size, max_size))
 
@@ -144,7 +144,7 @@ def get_chatgpt_response(prompt, num_questions, language, image=None):
         response = client.chat.completions.create(
             model="gpt-4o",
             messages=messages,
-            max_tokens=8000,
+            max_tokens=16000,
             temperature=0.5
         )
 
@@ -174,7 +174,7 @@ def get_chatgpt_response(prompt, num_questions, language, image=None):
         logging.error(f"Fehler: {e}")
         return None
 
-def generate_word_document(questions):
+def generate_word_document(questions, include_answers=True):
     """Generate a Word document from the quiz questions."""
     try:
         doc = docx.Document()
@@ -195,8 +195,11 @@ def generate_word_document(questions):
             
             # Determine correct answer label
             answer_labels = ['A', 'B', 'C']
-            correct_label = next(label for label, ans in zip(answer_labels, all_answers) 
-                               if ans == correct_answer)
+            try:
+                correct_label = next(label for label, ans in zip(answer_labels, all_answers) 
+                                   if ans == correct_answer)
+            except StopIteration:
+                correct_label = "A"  # Fallback falls kein Label gefunden wird
             
             # Add question
             doc.add_paragraph(f"{i}. {question_text}")
@@ -205,8 +208,9 @@ def generate_word_document(questions):
             for label, option in zip(answer_labels, all_answers):
                 doc.add_paragraph(f"{label}. {option}")
             
-            # Add correct answer
-            doc.add_paragraph(f"Antwort: {correct_label}")
+            # Add correct answer if required
+            if include_answers:
+                doc.add_paragraph(f"Antwort: {correct_label}")
             
             # Add spacing
             doc.add_paragraph()
@@ -381,15 +385,26 @@ def main():
                     st.error("Fehler beim Generieren der Fragen.")
 
         if all_questions:
-            # Generate Word document
-            doc_bytes = generate_word_document(all_questions)
+            # Generate Word document with answers
+            doc_with_answers = generate_word_document(all_questions, include_answers=True)
             
-            if doc_bytes:
-                # Download button
+            # Generate printable Word document without answers
+            doc_printable = generate_word_document(all_questions, include_answers=False)
+            
+            if doc_with_answers and doc_printable:
+                # Download button for Microsoft Forms Quiz (mit Antworten)
                 st.download_button(
-                    label="Quiz-Dokument herunterladen",
-                    data=doc_bytes,
+                    label="Quiz-Dokument herunterladen (mit Antworten)",
+                    data=doc_with_answers,
                     file_name=f"Quiz_für_Microsoft_Forms_{selected_language}.docx",
+                    mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                )
+                
+                # Download button for Printable Exam (ohne Antworten)
+                st.download_button(
+                    label="Prüfung drucken (ohne Antworten)",
+                    data=doc_printable,
+                    file_name=f"Prüfung_{selected_language}.docx",
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
                 
@@ -401,7 +416,7 @@ def main():
                         st.markdown(f"**Falsche Antworten:** {', '.join(q['incorrect_answers'])}")
                 
                 # Show import instructions
-                st.success("Quiz erfolgreich generiert! Laden Sie das Dokument herunter und importieren Sie es in Microsoft Forms.")
+                st.success("Quiz erfolgreich generiert! Laden Sie die Dokumente herunter und importieren bzw. drucken Sie sie.")
                 st.markdown("Brauchen Sie Hilfe beim Importieren? Überprüfen Sie die Anleitungen und Tutorials in der Seitenleiste.")
 
 if __name__ == "__main__":
