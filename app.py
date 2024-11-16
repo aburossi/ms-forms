@@ -145,7 +145,7 @@ def get_chatgpt_response(prompt, num_questions, language, image=None):
             model="gpt-4o",
             messages=messages,
             max_tokens=16000,
-            temperature=0.5
+            temperature=0.55
         )
 
         # Get the response content
