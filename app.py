@@ -9,14 +9,13 @@ import io
 import base64
 import logging
 import re
-from pdf2image import convert_from_bytes  # Für PDF-zu-Bild-Konvertierung
-import streamlit.components.v1 as components  # Für das Einbetten von HTML-Komponenten
-
+from pdf2image import convert_from_bytes  # For PDF to Image Conversion
+import streamlit.components.v1 as components  # For Embedding HTML Components
 
 # Set up logging for better error tracking
 logging.basicConfig(level=logging.INFO)
 
-# Initialize OpenAI client (außerhalb von main für globalen Zugriff)
+# Initialize OpenAI client (outside main for global access)
 def initialize_openai(api_key):
     return OpenAI(api_key=api_key)
 
@@ -84,7 +83,7 @@ def process_image(_image):
             img = img.convert('RGB')
 
         # Resize if the image is too large
-        max_size = 1000  # Maximale Größe zur Reduzierung des Speicherverbrauchs
+        max_size = 1000  # Maximum size to reduce memory footprint
         if max(img.size) > max_size:
             img.thumbnail((max_size, max_size))
 
@@ -100,6 +99,11 @@ def process_image(_image):
 
 def get_chatgpt_response(prompt, num_questions, language, image=None):
     """Get response from OpenAI API with error handling."""
+    global client
+    if not client:
+        st.error("Kein gültiger OpenAI-API-Schlüssel vorhanden. Bitte geben Sie Ihren API-Schlüssel ein.")
+        return None
+
     try:
         system_prompt = f"""
         You are an expert in education and quiz creation. Generate {num_questions} quiz questions based on the provided content.
@@ -136,9 +140,17 @@ def get_chatgpt_response(prompt, num_questions, language, image=None):
         if image:
             base64_image = process_image(image)
             if base64_image:
-                # Embed the image in the prompt using a data URL
-                image_data_url = f"data:image/jpeg;base64,{base64_image}"
-                messages[1]["content"] = f"{prompt}\n![Image]({image_data_url})"
+                # Embed the image in the prompt using a structured object
+                messages[1]["content"] = [
+                    {"type": "text", "text": prompt},
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}",
+                            "detail": "low"
+                        }
+                    }
+                ]
             else:
                 st.warning("Bildverarbeitung fehlgeschlagen. Fortfahren ohne das Bild.")
 
@@ -151,7 +163,7 @@ def get_chatgpt_response(prompt, num_questions, language, image=None):
 
         # Get the response content
         response_text = response.choices[0].message.content.strip()
-        
+
         # Try to find JSON content within the response
         json_match = re.search(r'\{[\s\S]*\}', response_text)
         if json_match:
@@ -195,12 +207,12 @@ def generate_word_document(questions, include_answers=True):
             random.shuffle(all_answers)
             
             # Determine correct answer label
-            answer_labels = ['A', 'B', 'C']
+            answer_labels = ['A', 'B', 'C', 'D']
             try:
                 correct_label = next(label for label, ans in zip(answer_labels, all_answers) 
                                    if ans == correct_answer)
             except StopIteration:
-                correct_label = "A"  # Fallback falls kein Label gefunden wird
+                correct_label = "A"  # Fallback if no label is found
             
             # Add question
             doc.add_paragraph(f"{i}. {question_text}")
@@ -260,7 +272,7 @@ def main():
     with st.sidebar:
         st.header("❗ **Bedienungsanleitung**")
         
-        # First instruction step
+        # Step 1: API Key
         st.markdown("""
         1. **Geben Sie Ihren OpenAI-API-Schlüssel ein**: Erhalten Sie Ihren API-Schlüssel von [OpenAI](https://platform.openai.com/account/api-keys).
         """)
@@ -275,7 +287,7 @@ def main():
         
         # Remaining instruction steps starting from step 2
         st.markdown("""
-        2. **Datei hochladen oder Text eingeben**: Sie können eine PDF-, DOCX- oder Bilddatei hochladen oder direkt Text eingeben.
+        2. **Datei hochladen oder Text eingeben**: Sie können eine PDF- oder DOCX- hochladen oder direkt Text eingeben (❗ Bilder funktionieren noch nicht).
         3. **Lernziele angeben** (optional): Definieren Sie die Lernziele, die die Quizfragen abdecken sollen.
         4. **Sprache für Fragen wählen**: Wählen Sie die Sprache, in der die Quizfragen generiert werden sollen.
         5. **Anzahl der Fragen auswählen**: Bestimmen Sie, wie viele Fragen generiert werden sollen.
@@ -294,7 +306,7 @@ def main():
     selected_language = LANGUAGES[selected_language_key]
 
     # File upload
-    uploaded_file = st.file_uploader("Datei hochladen (PDF, DOCX oder Bild)", type=SUPPORTED_FILE_TYPES)
+    uploaded_file = st.file_uploader("Datei hochladen (PDF oder DOCX (❗ Bild noch fehlerhaft)", type=SUPPORTED_FILE_TYPES)
 
     content = ""
     image_content = None
@@ -399,7 +411,7 @@ def main():
             doc_printable = generate_word_document(all_questions, include_answers=False)
             
             if doc_with_answers and doc_printable:
-                # Download button for Microsoft Forms Quiz (mit Antworten)
+                # Download button for Microsoft Forms Quiz (with answers)
                 st.download_button(
                     label="Quiz-Dokument herunterladen (mit Antworten)",
                     data=doc_with_answers,
@@ -407,7 +419,7 @@ def main():
                     mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 )
                 
-                # Download button for Printable Exam (ohne Antworten)
+                # Download button for Printable Exam (without answers)
                 st.download_button(
                     label="Prüfung drucken (ohne Antworten)",
                     data=doc_printable,
